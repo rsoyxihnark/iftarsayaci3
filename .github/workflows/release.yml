@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Run the release gate
+        id: gate
+        shell: bash
+        run: python .github/release_gate.py
+
+      - name: Install the dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install pyinstaller
+
+      - name: Build the application
+        shell: bash
+        run: |
+          pyinstaller --noconfirm --clean --onefile --windowed \
+            --name IftarSayaci \
+            --collect-all babel \
+            --collect-all certifi \
+            --collect-all hijridate \
+            --collect-all tzdata \
+            iftar_sayaci.py
+          test -f dist/IftarSayaci.exe
+
+      - name: Publish the release
+        if: steps.gate.outputs.release == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git log -1 --pretty=%b > release_notes.md
+          gh release create "${{ steps.gate.outputs.tag }}" \
+            dist/IftarSayaci.exe \
+            --title "${{ steps.gate.outputs.version }}" \
+            --notes-file release_notes.md

@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+*.spec
+.env
+settings.ini
+settings.ini.tmp
+settings.ini.backup_*
+activity.log
+activity.log.*

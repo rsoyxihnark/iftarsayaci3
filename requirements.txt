@@ -1,0 +1,9 @@
+babel
+certifi
+geopy
+hijridate
+ntplib
+python-dotenv
+requests
+rich
+tzdata

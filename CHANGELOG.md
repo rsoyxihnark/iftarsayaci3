@@ -1,0 +1,15 @@
+# Değişiklik Günlüğü
+
+## 1.0
+
+- İftara ve sahura kalan süre, geçen sürenin yüzdesiyle birlikte canlı olarak gösteriliyor.
+- İmsak, Güneş, Öğle, İkindi, Akşam ve Yatsı vakitleri seçili konum için günlük olarak listeleniyor.
+- Konum otomatik olarak bulunuyor, dilediğinizde elle de girilebiliyor.
+- Namaz vakitleri on ayrı hesaplama yöntemiyle hesaplanabiliyor.
+- İçinde bulunulan hicri aya ait imsak takvimi görüntülenebiliyor.
+- Bilgisayarın saati internet saat sunucusuyla karşılaştırılıp aradaki sapma bildiriliyor.
+- Seçilen konum ve hesaplama yöntemi kapanışta kaydediliyor, uygulama yeniden açıldığında geri yükleniyor.
+- Uygulama içindeki konsol paneli yapılan işlemleri anlık olarak gösteriyor.
+- Hakkında penceresi artık uygulamanın sürümünü de gösteriyor.
+- Ekrandaki metinlerde uzun tire yerine virgül ve iki nokta kullanılıyor.
+- Uygulama, kurulum gerektirmeyen tek dosyalık Windows programı olarak indirilebiliyor.
