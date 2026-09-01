@@ -146,14 +146,7 @@ from babel import dates as babel_dates
 from dotenv import load_dotenv
 from geopy.extra.rate_limiter import RateLimiter
 
-try:
-    from hijridate import Gregorian as HicriGregorian
-except ImportError:
-    from hijri_converter import Gregorian as HicriGregorian
-    logging.warning(
-        "'hijri_converter' paketi kullanılıyor; bu paket artık desteklenmiyor. "
-        "Yerine 'hijridate' paketini kurmanız önerilir."
-    )
+from hijridate import Gregorian as HicriGregorian
 
 def uygulama_dizini() -> str:
     if getattr(sys, "frozen", False):
@@ -164,7 +157,7 @@ BASE_DIR = uygulama_dizini()
 
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-APP_VERSION = "1.1.1"
+APP_VERSION = "1.1.2"
 GEOPY_MIN_DELAY = 1.1
 
 class TkManager:

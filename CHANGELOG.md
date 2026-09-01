@@ -1,5 +1,9 @@
 # Değişiklik Günlüğü
 
+## 1.1.2
+
+- Hicri tarih hesabı artık yalnızca güncel takvim kütüphanesiyle yapılıyor, desteği bırakılmış eski kütüphaneye geri dönülmüyor.
+
 ## 1.1.1
 
 - Pencere, kapatıldığı yerde ve boyutta yeniden açılıyor.
