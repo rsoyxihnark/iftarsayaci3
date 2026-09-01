@@ -1,5 +1,11 @@
 # Değişiklik Günlüğü
 
+## 1.1
+
+- Ayarlar ve günlük dosyası artık programın bulunduğu klasöre yazılıyor.
+- Program kapatılıp yeniden açıldığında seçilen konum ve hesaplama yöntemi korunuyor.
+- .env dosyası da programın bulunduğu klasörden okunuyor.
+
 ## 1.0
 
 - İftara ve sahura kalan süre, geçen sürenin yüzdesiyle birlikte canlı olarak gösteriliyor.

@@ -154,9 +154,16 @@ except ImportError:
         "Yerine 'hijridate' paketini kurmanız önerilir."
     )
 
-load_dotenv()
+def uygulama_dizini() -> str:
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(os.path.abspath(sys.executable))
+    return os.path.dirname(os.path.abspath(__file__))
 
-APP_VERSION = "1.0"
+BASE_DIR = uygulama_dizini()
+
+load_dotenv(os.path.join(BASE_DIR, ".env"))
+
+APP_VERSION = "1.1"
 GEOPY_MIN_DELAY = 1.1
 
 class TkManager:
@@ -2279,7 +2286,7 @@ def graceful_shutdown():
     os._exit(0)
 
 if __name__ == "__main__":
-    base_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dir = BASE_DIR
     model = IftarModel(base_dir=base_dir, default_timeout=10, short_timeout=5, default_retries=3, backoff_factor=2)
     CHECK_MODULE_UPDATES = parse_bool(model.config_manager.get("check_module_updates", "False"))
     if CHECK_MODULE_UPDATES:
