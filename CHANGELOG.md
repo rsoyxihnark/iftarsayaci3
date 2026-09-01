@@ -1,5 +1,13 @@
 # Değişiklik Günlüğü
 
+## 1.1.1
+
+- Pencere, kapatıldığı yerde ve boyutta yeniden açılıyor.
+- Açılışta modül güncellemelerini kontrol etme seçeneği açıkken uygulama artık kendi kopyalarını açmıyor.
+- Hakkında penceresi yüklü kütüphanelerin sürümlerini eksiksiz gösteriyor.
+- Pencere başlığında artık programın kendi adı yazıyor.
+- Otomatik konum sorgusu geç tamamlandığında bulduğu sonuç, bu arada elle seçilen konumun üzerine yazılmıyor.
+
 ## 1.1
 
 - Ayarlar ve günlük dosyası artık programın bulunduğu klasöre yazılıyor.

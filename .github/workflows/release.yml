@@ -43,6 +43,11 @@ jobs:
             --collect-all certifi \
             --collect-all hijridate \
             --collect-all tzdata \
+            --copy-metadata geopy \
+            --copy-metadata ntplib \
+            --copy-metadata python-dotenv \
+            --copy-metadata requests \
+            --copy-metadata rich \
             iftar_sayaci.py
           test -f dist/IftarSayaci.exe
 

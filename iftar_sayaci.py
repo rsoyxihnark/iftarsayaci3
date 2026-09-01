@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import concurrent.futures
 import configparser
 import functools
@@ -114,6 +113,8 @@ class ModuleManager:
 
     @classmethod
     def ensure_required_modules(cls, modules: List["ModuleManager.ModuleInfo"]) -> None:
+        if getattr(sys, "frozen", False):
+            return
         for mod_info in modules:
             cls.manage_module(mod_info)
 
@@ -163,7 +164,7 @@ BASE_DIR = uygulama_dizini()
 
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-APP_VERSION = "1.1"
+APP_VERSION = "1.1.1"
 GEOPY_MIN_DELAY = 1.1
 
 class TkManager:
@@ -621,6 +622,9 @@ class IftarModel:
             logging.debug("Geciken otomatik konum sorgusu tamamlanamadı: %s", type(e).__name__)
             return
         if not konum or lat is None or lon is None:
+            return
+        if self.current_location != self.DEFAULT_LOCATION:
+            logging.info("Geciken otomatik konum sonucu, bu arada seçilen konumun üzerine yazılmadı.")
             return
         self.konumu_kaydet(konum, lat, lon)
         logging.info("Geciken otomatik konum sonucu bir sonraki açılış için kaydedildi: %s", konum)
@@ -1300,7 +1304,7 @@ class IftarView:
                 self.console_frame.pack_forget()
         try:
             if self.pencere and self.pencere.winfo_exists() and not self.pencere.attributes("-fullscreen"):
-                geom = self.pencere.winfo_geometry()
+                geom = self.pencere.geometry()
                 geom_match = GEOMETRY_RE.match(geom)
                 if geom_match:
                     self.pencere.geometry(f"{geom_match.group(1)}x{self._asgari_yukseklik()}+{geom_match.group(3)}+{geom_match.group(4)}")
@@ -1688,7 +1692,7 @@ class IftarView:
         self.pencere.report_callback_exception = self._tk_hatasini_bildir
         self.pencere.withdraw()
         self.patch_messagebox_functions()
-        self._dosya_adi = os.path.basename(__file__)
+        self._dosya_adi = os.path.basename(sys.executable if getattr(sys, "frozen", False) else __file__)
         pencere_boyutu = self.get_window_geometry()
         geom_match = GEOMETRY_RE.match(pencere_boyutu)
         if geom_match:
@@ -1983,7 +1987,7 @@ class IftarView:
                 self.pencere.attributes("-fullscreen", False)
                 self.pencere.update_idletasks()
             else:
-                self.windowed_geometry = self.pencere.winfo_geometry()
+                self.windowed_geometry = self.pencere.geometry()
             self.model.config_manager.set("pencere_boyutu", self._kaydedilecek_geometri())
             self.model.config_manager.save()
         except Exception as e:
@@ -1997,7 +2001,7 @@ class IftarView:
             self.pencere = None
             graceful_shutdown()
     def _kaydedilecek_geometri(self) -> str:
-        mevcut = self.windowed_geometry if self.windowed_geometry else self.pencere.winfo_geometry()
+        mevcut = self.windowed_geometry if self.windowed_geometry else self.pencere.geometry()
         istenen_yukseklik = self._asgari_yukseklik()
         geom_match = GEOMETRY_RE.match(mevcut)
         if geom_match:
