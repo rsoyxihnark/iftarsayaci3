@@ -157,7 +157,7 @@ BASE_DIR = uygulama_dizini()
 
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-APP_VERSION = "1.1.3"
+APP_VERSION = "1.1.4"
 GEOPY_MIN_DELAY = 1.1
 
 class TkManager:
@@ -668,7 +668,7 @@ class IftarModel:
             self.log_message("Otomatik konum sorgusu başlatılıyor...")
             headers = {"Authorization": f"Bearer {self.IPINFO_API_KEY}"} if self.IPINFO_API_KEY else None
             url = "https://ipinfo.io/json"
-            response = self.perform_request_with_retry(url, retries=2, timeout=self.SHORT_TIMEOUT, headers=headers)
+            response = self.perform_request_with_retry(url, retries=2, timeout=self.SHORT_TIMEOUT, headers=headers, devre_kesici=False)
             self.log_message(f"ipinfo.io yanıt kodu: {response.status_code}")
             if response.status_code == 200:
                 data = response.json()
@@ -755,6 +755,10 @@ class IftarModel:
                 hicri_ay_ing = data["data"]["hijri"]["month"]["en"].strip()
                 normalized_ay = self.remove_diacritics(hicri_ay_ing).lower()
                 turkce_ay = HICRI_AY_ING_MAP.get(normalized_ay, hicri_ay_ing)
+                if turkce_ay in HICRI_AY_ISIMLERI:
+                    with self._hijri_cache_lock:
+                        self._hijri_month_cache_val = HICRI_AY_ISIMLERI.index(turkce_ay) + 1
+                        self._hijri_month_cache_date = today.date()
             _hicri_result = f"{hicri_gun} {turkce_ay} {hicri_yil} İmsak Takvimi"
             with self._hijri_cache_lock:
                 self._hicri_header_cache_val = _hicri_result
@@ -911,7 +915,7 @@ class IftarModel:
         except Exception as e:
             logging.warning("API sağlık kontrolü başarısız: %s", type(e).__name__)
             return ("api.aladhan.com", "bağlantı kurulamadı")
-    def perform_request_with_retry(self, url: str, retries: Optional[int] = None, backoff_factor: Optional[int] = None, timeout: Optional[int] = None, headers: Optional[Dict[str, str]] = None) -> requests.Response:
+    def perform_request_with_retry(self, url: str, retries: Optional[int] = None, backoff_factor: Optional[int] = None, timeout: Optional[int] = None, headers: Optional[Dict[str, str]] = None, devre_kesici: bool = True) -> requests.Response:
         if retries is None:
             retries = self.DEFAULT_RETRIES
         if backoff_factor is None:
@@ -920,7 +924,7 @@ class IftarModel:
             timeout = self.DEFAULT_TIMEOUT
         with self._circuit_breaker_lock:
             current_time = time.monotonic()
-            if self._circuit_breaker_state == "open":
+            if devre_kesici and self._circuit_breaker_state == "open":
                 if current_time < self._circuit_breaker_open_until:
                     logging.warning(
                         "Circuit breaker açık; API çağrısı atlanıyor (%d saniye kaldı).",
@@ -930,7 +934,7 @@ class IftarModel:
                 self._circuit_breaker_state = "half-open"
                 retries = 1
                 logging.info("Circuit breaker yarı açık; tek bir sondaj isteği gönderiliyor.")
-            elif self._circuit_breaker_state == "half-open":
+            elif devre_kesici and self._circuit_breaker_state == "half-open":
                 raise APIError("Circuit breaker açık. Sondaj isteği sürerken yeni çağrı gönderilmiyor.")
         def operation() -> requests.Response:
             with self._rate_limit_lock:
@@ -956,9 +960,11 @@ class IftarModel:
         try:
             result = retry_operation(operation, retries, backoff_factor)
         except Exception:
-            self._istek_sonucunu_isle(basarili=False)
+            if devre_kesici:
+                self._istek_sonucunu_isle(basarili=False)
             raise
-        self._istek_sonucunu_isle(basarili=True)
+        if devre_kesici:
+            self._istek_sonucunu_isle(basarili=True)
         self.log_message(f"{url.split('?')[0]} adresine yapılan istek başarılı. Durum: {result.status_code}")
         return result
     def _istek_sonucunu_isle(self, basarili: bool) -> None:

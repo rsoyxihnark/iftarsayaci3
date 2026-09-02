@@ -1,5 +1,10 @@
 # Değişiklik Günlüğü
 
+## 1.1.4
+
+- Hicri ay bilgisi eksik geldiğinde de tanınıyor, Ramazan karşılaması ve o aya ait imsakiye takvimi doğru görüntüleniyor.
+- Otomatik konum servisine ulaşılamaması artık namaz vakitlerinin alınmasını engellemiyor.
+
 ## 1.1.3
 
 - Otomatik konum alınamadığında uygulama artık bunu bildiriyor.
