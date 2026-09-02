@@ -157,7 +157,7 @@ BASE_DIR = uygulama_dizini()
 
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-APP_VERSION = "1.1.2"
+APP_VERSION = "1.1.3"
 GEOPY_MIN_DELAY = 1.1
 
 class TkManager:
@@ -373,7 +373,7 @@ class ConfigManager:
                 self.save()
                 return
             try:
-                self.config.read(self.path, encoding="utf-8")
+                self.config.read(self.path, encoding="utf-8-sig")
                 if "AYARLAR" not in self.config or not self.config["AYARLAR"]:
                     logging.info("Ayarlar bölümü eksik veya boş; varsayılan ayarlar yazılıyor.")
                     self.config["AYARLAR"] = dict(DEFAULT_SETTINGS)
@@ -1083,6 +1083,8 @@ class IftarController:
             finally:
                 self._butonu_serbest_birak(btn, "🌐 Otomatik Konum Seç")
             if not yeni_konum:
+                if self.view:
+                    self.view.show_error("Konum Hatası", "Otomatik konum alınamadı.")
                 return
             self._konumu_uygula(yeni_konum, lat, lon)
             TkManager.safe_after(0, lambda: safe_showinfo("Konum Güncellendi", f"Yeni konum: {yeni_konum}"), context="KonumGuncellendiBilgi")
@@ -1300,7 +1302,9 @@ class IftarView:
                 geom = self.pencere.geometry()
                 geom_match = GEOMETRY_RE.match(geom)
                 if geom_match:
-                    self.pencere.geometry(f"{geom_match.group(1)}x{self._asgari_yukseklik()}+{geom_match.group(3)}+{geom_match.group(4)}")
+                    fark = WIN_HEIGHT_DEV - WIN_HEIGHT_NORMAL
+                    yukseklik = int(geom_match.group(2)) + (fark if new_val else -fark)
+                    self.pencere.geometry(f"{geom_match.group(1)}x{yukseklik}+{geom_match.group(3)}+{geom_match.group(4)}")
         except Exception as e:
             logging.debug("Pencere geometrisi güncellenirken hata: %s", e)
         self.controller.log_message(f"Geliştirici Modu {'aktif' if new_val else 'pasif'} olarak güncellendi.")
@@ -1327,7 +1331,9 @@ class IftarView:
                         ulke_kodu = address_details.get("country_code", "")
                         if not city and location.address:
                             city = location.address.split(",")[0].strip()
-                    active_text = f"{city} {ulke_bayragi(ulke_kodu)}: {lat:.2f}° , {lon:.2f}°"
+                    koordinat = f"{lat:.2f}° , {lon:.2f}°"
+                    etiket = f"{city} {ulke_bayragi(ulke_kodu)}".strip()
+                    active_text = f"{etiket}: {koordinat}" if etiket else koordinat
                 else:
                     active_text = "Konum bilgisi yok"
                 TkManager.safe_after(0, lambda: self._update_dynamic_entry(active_text), context="KonumEtiketi")

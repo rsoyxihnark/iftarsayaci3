@@ -1,5 +1,12 @@
 # Değişiklik Günlüğü
 
+## 1.1.3
+
+- Otomatik konum alınamadığında uygulama artık bunu bildiriyor.
+- Ayar dosyası bir metin düzenleyicide kaydedildikten sonra da okunuyor, kayıtlı konum ve yöntem varsayılanlara dönmüyor.
+- Geliştirici modu açılıp kapatılırken pencere, seçtiğiniz yüksekliği koruyarak yalnızca konsol paneli kadar büyüyüp küçülüyor.
+- Şehir adı alınamadığında aktif konum satırında artık fazladan boşluk ve iki nokta görünmüyor.
+
 ## 1.1.2
 
 - Hicri tarih hesabı artık yalnızca güncel takvim kütüphanesiyle yapılıyor, desteği bırakılmış eski kütüphaneye geri dönülmüyor.
