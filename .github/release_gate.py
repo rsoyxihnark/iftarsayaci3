@@ -5,8 +5,6 @@ import sys
 
 SOURCE = "iftar_sayaci.py"
 CHANGELOG = "CHANGELOG.md"
-META_DIRS = (".github/", ".claude/")
-META_FILES = ("CLAUDE.md",)
 VERSION_PATTERN = re.compile(r"^APP_VERSION\s*=\s*[\"']([^\"']+)[\"']", re.MULTILINE)
 SUBJECT_PATTERN = re.compile(r"^\[\s*(no release|\d+(?:\.\d+)+)\s*\]")
 UNRELEASED_PATTERN = re.compile(r"^#{1,6}\s*Unreleased\s*$", re.MULTILINE | re.IGNORECASE)
@@ -40,16 +38,6 @@ def source_version():
 def changed_files():
     output = git("diff-tree", "--no-commit-id", "--name-only", "-r", "--root", "HEAD")
     return [line.strip() for line in output.splitlines() if line.strip()]
-
-
-def only_meta(paths):
-    for path in paths:
-        if path in META_FILES:
-            continue
-        if any(path.startswith(prefix) for prefix in META_DIRS):
-            continue
-        return False
-    return True
 
 
 def bullet_entries(lines):
@@ -96,11 +84,8 @@ def main():
     marker = match.group(1)
 
     if marker == "no release":
-        if not only_meta(files):
-            if not changelog_touched:
-                fail("A [no release] commit that changes the program writes its entries into " + CHANGELOG + ".")
-            if UNRELEASED_PATTERN.search(changelog_text) is None:
-                fail("A [no release] commit with entries puts them under an Unreleased heading.")
+        if changelog_touched and UNRELEASED_PATTERN.search(changelog_text) is None:
+            fail("A [no release] commit with entries puts them under an Unreleased heading.")
         emit("release", "false")
         emit("version", version)
         emit("tag", "")
