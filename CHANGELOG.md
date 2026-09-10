@@ -1,5 +1,9 @@
 # Değişiklik Günlüğü
 
+## 1.1.6
+
+- Geliştirici modunda konsol paneli, uzun hata kayıtları bir anda geldiğinde de eski satırları atıyor ve aşırı büyümüyor.
+
 ## 1.1.5
 
 - Bağlantı koptuğunda konsol paneline aynı uyarı tekrar tekrar yazılmıyor, sunucuya yeniden bağlanma denemesi de bildirilen süreden geç başlamıyor.

@@ -157,7 +157,7 @@ BASE_DIR = uygulama_dizini()
 
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-APP_VERSION = "1.1.5"
+APP_VERSION = "1.1.6"
 GEOPY_MIN_DELAY = 1.1
 
 class TkManager:
@@ -2196,22 +2196,13 @@ class IftarView:
             try:
                 self.ConsolePanel.configure(state="normal")
 
-                current_line_count_str = self.ConsolePanel.index("end-1c").split('.')[0]
-                try:
-                    current_line_count = int(current_line_count_str)
-                except ValueError:
-                    current_line_count = 0
-
-                lines_to_be_added = sum(msg.count('\n') for _level, msg in new_messages)
-
-                if current_line_count + lines_to_be_added > max_lines:
-                    lines_to_delete = (current_line_count + lines_to_be_added) - max_lines
-                    delete_end_index = f"{lines_to_delete + 1}.0"
-                    self.ConsolePanel.delete("1.0", delete_end_index)
-
                 for level, msg in new_messages:
                     tag_to_apply = level if level in ("ERROR", "WARNING", "INFO", "DEBUG") else "DEFAULT"
                     self.ConsolePanel.insert("end", msg, (tag_to_apply,))
+
+                satir_sayisi = int(self.ConsolePanel.index("end-1c").split('.')[0])
+                if satir_sayisi > max_lines:
+                    self.ConsolePanel.delete("1.0", f"{satir_sayisi - max_lines + 1}.0")
 
                 self.ConsolePanel.see("end")
 
