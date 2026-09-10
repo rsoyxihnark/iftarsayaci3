@@ -34,6 +34,10 @@ jobs:
           python -m pip install -r requirements.txt
           python -m pip install pyinstaller
 
+      - name: Run the checks
+        shell: bash
+        run: python .github/checks.py
+
       - name: Build the application
         shell: bash
         run: |

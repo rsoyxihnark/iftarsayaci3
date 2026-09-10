@@ -157,7 +157,7 @@ BASE_DIR = uygulama_dizini()
 
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-APP_VERSION = "1.1.4"
+APP_VERSION = "1.1.5"
 GEOPY_MIN_DELAY = 1.1
 
 class TkManager:
@@ -975,10 +975,11 @@ class IftarModel:
                 self._failure_count = 0
                 self._circuit_breaker_state = "closed"
                 return
+            if self._circuit_breaker_state == "open":
+                return
             yari_acikti = self._circuit_breaker_state == "half-open"
             self._failure_count += 1
             if yari_acikti or self._failure_count >= self._failure_threshold:
-                sayac = self._failure_count
                 self._failure_count = self._failure_threshold
                 self._circuit_breaker_state = "open"
                 self._circuit_breaker_open_until = time.monotonic() + self._circuit_breaker_reset_timeout
@@ -990,7 +991,7 @@ class IftarModel:
                 else:
                     logging.warning(
                         "Arka arkaya %d başarısız istek nedeniyle circuit breaker açıldı; %d saniye boyunca API çağrıları atlanacak.",
-                        sayac, self._circuit_breaker_reset_timeout
+                        self._failure_threshold, self._circuit_breaker_reset_timeout
                     )
 
 class LogBufferHandler(logging.Handler):
@@ -1459,6 +1460,8 @@ class IftarView:
             return
 
         def fetch_and_display():
+            if istek_no != self._tooltip_seq:
+                return
             adres = self.model.format_active_location(lat, lon)
             TkManager.safe_after(0, lambda: _display_tooltip_with_text(adres, x_root, y_root), context="TooltipGoster")
         self.model.executor.submit(fetch_and_display)

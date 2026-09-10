@@ -1,5 +1,10 @@
 # Değişiklik Günlüğü
 
+## 1.1.5
+
+- Bağlantı koptuğunda konsol paneline aynı uyarı tekrar tekrar yazılmıyor, sunucuya yeniden bağlanma denemesi de bildirilen süreden geç başlamıyor.
+- Aktif konum satırından imleç ayrıldığında adres sorgusu artık sürdürülmüyor, namaz vakitleri ve takvim bu yüzden geç yenilenmiyor.
+
 ## 1.1.4
 
 - Hicri ay bilgisi eksik geldiğinde de tanınıyor, Ramazan karşılaması ve o aya ait imsakiye takvimi doğru görüntüleniyor.
