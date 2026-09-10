@@ -1,5 +1,9 @@
 # Değişiklik Günlüğü
 
+## 1.1.7
+
+- Konum başka bir saat dilimine değiştirildiğinde vakitler artık her zaman yeni konumun saat dilimine göre hesaplanıyor.
+
 ## 1.1.6
 
 - Geliştirici modunda konsol paneli, uzun hata kayıtları bir anda geldiğinde de eski satırları atıyor ve aşırı büyümüyor.

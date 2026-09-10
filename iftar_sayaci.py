@@ -157,7 +157,7 @@ BASE_DIR = uygulama_dizini()
 
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-APP_VERSION = "1.1.6"
+APP_VERSION = "1.1.7"
 GEOPY_MIN_DELAY = 1.1
 
 class TkManager:
@@ -450,8 +450,7 @@ class IftarModel:
         self._adres_cache_lock = threading.RLock()
         self.current_ezan_saatleri: Dict[str, str] = {}
         self.current_ezan_anahtari: Optional[tuple] = None
-        self._zaman_dilimi: Optional[tzinfo] = None
-        self._zaman_dilimi_str: Optional[str] = None
+        self._zaman_dilimi: Optional[Tuple[Optional[str], tzinfo]] = None
         self.yesterday_maghrib_str: Optional[str] = None
         self.tomorrow_imsak_str: Optional[str] = None
         self._ntp_cache: Optional[datetime] = None
@@ -690,10 +689,11 @@ class IftarModel:
         return (None, None, None)
     def zaman_dilimi(self) -> tzinfo:
         tz_str = self.current_ezan_saatleri.get("timezone")
-        if self._zaman_dilimi is None or self._zaman_dilimi_str != tz_str:
-            self._zaman_dilimi = get_timezone_from_str(tz_str)
-            self._zaman_dilimi_str = tz_str
-        return self._zaman_dilimi
+        onbellek = self._zaman_dilimi
+        if onbellek is None or onbellek[0] != tz_str:
+            onbellek = (tz_str, get_timezone_from_str(tz_str))
+            self._zaman_dilimi = onbellek
+        return onbellek[1]
     def yerel_simdi(self) -> datetime:
         return get_utc_now().astimezone(self.zaman_dilimi())
     def ezan_saatlerini_hesapla(self, enlem: float, boylam: float, method: str, for_date: Optional[str] = None) -> Optional[Dict[str, str]]:
