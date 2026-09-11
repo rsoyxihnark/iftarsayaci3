@@ -157,7 +157,7 @@ BASE_DIR = uygulama_dizini()
 
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-APP_VERSION = "1.1.7"
+APP_VERSION = "1.2.0"
 GEOPY_MIN_DELAY = 1.1
 
 class TkManager:

@@ -1,5 +1,9 @@
 # Değişiklik Günlüğü
 
+## 1.2.0
+
+- IftarSayaci.exe dosyasının sürüm ve ürün bilgisi artık Windows'ta dosyanın özelliklerinde ve Dosya Gezgini'nin Dosya sürümü sütununda görünüyor.
+
 ## 1.1.7
 
 - Konum başka bir saat dilimine değiştirildiğinde vakitler artık her zaman yeni konumun saat dilimine göre hesaplanıyor.

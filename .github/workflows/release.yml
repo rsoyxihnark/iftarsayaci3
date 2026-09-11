@@ -38,11 +38,16 @@ jobs:
         shell: bash
         run: python .github/checks.py
 
+      - name: Write the version information
+        shell: bash
+        run: python .github/version_info.py version_info.txt
+
       - name: Build the application
         shell: bash
         run: |
           pyinstaller --noconfirm --clean --onefile --windowed \
             --name IftarSayaci \
+            --version-file version_info.txt \
             --collect-all babel \
             --collect-all certifi \
             --collect-all hijridate \
@@ -54,6 +59,17 @@ jobs:
             --copy-metadata rich \
             iftar_sayaci.py
           test -f dist/IftarSayaci.exe
+
+      - name: Check the version information
+        shell: pwsh
+        run: |
+          $expected = (python .github/version_info.py show).Trim()
+          $actual = (Get-Item dist/IftarSayaci.exe).VersionInfo.FileVersion
+          if ($actual -ne $expected) {
+            Write-Output "::error::IftarSayaci.exe reports the file version '$actual' instead of '$expected'."
+            exit 1
+          }
+          Write-Output "IftarSayaci.exe reports the file version $actual."
 
       - name: Publish the release
         if: steps.gate.outputs.release == 'true'

@@ -6,6 +6,7 @@ venv/
 build/
 dist/
 *.spec
+version_info.txt
 .env
 settings.ini
 settings.ini.tmp
