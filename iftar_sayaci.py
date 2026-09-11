@@ -157,7 +157,7 @@ BASE_DIR = uygulama_dizini()
 
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.2.1"
 GEOPY_MIN_DELAY = 1.1
 
 class TkManager:
@@ -343,6 +343,7 @@ def ulke_bayragi(alpha_2: str) -> str:
 
 CLEAN_TEXT_RE = re.compile(r'^[\s\u00A0\uFEFF\u200C]+|[\s\u00A0\uFEFF\u200C]+$')
 GEOMETRY_RE = re.compile(r"^(\d+)x(\d+)\+(-?\d+)\+(-?\d+)$")
+WIN_WIDTH_MIN = 650
 WIN_HEIGHT_NORMAL = 650
 WIN_HEIGHT_DEV = 860
 
@@ -1305,10 +1306,11 @@ class IftarView:
             else:
                 self.console_frame.pack_forget()
         try:
-            if self.pencere and self.pencere.winfo_exists() and not self.pencere.attributes("-fullscreen"):
+            if self.pencere and self.pencere.winfo_exists():
                 geom = self.pencere.geometry()
                 geom_match = GEOMETRY_RE.match(geom)
-                if geom_match:
+                self.pencere.minsize(WIN_WIDTH_MIN, self._asgari_yukseklik())
+                if geom_match and not self.pencere.attributes("-fullscreen"):
                     fark = WIN_HEIGHT_DEV - WIN_HEIGHT_NORMAL
                     yukseklik = int(geom_match.group(2)) + (fark if new_val else -fark)
                     self.pencere.geometry(f"{geom_match.group(1)}x{yukseklik}+{geom_match.group(3)}+{geom_match.group(4)}")
@@ -1709,7 +1711,7 @@ class IftarView:
         self.windowed_geometry = pencere_boyutu
         self.pencere.title(f"Namaz Vakitleri - {self._dosya_adi}")
         self.pencere.geometry(pencere_boyutu)
-        self.pencere.minsize(650, 400)
+        self.pencere.minsize(WIN_WIDTH_MIN, self._asgari_yukseklik())
         self.pencere.update_idletasks()
         self.create_fonts(self.pencere)
         self._stilleri_ayarla()
@@ -1719,7 +1721,7 @@ class IftarView:
         self.pencere.bind("<Map>", self._pencere_goruntulendi)
         TkManager.safe_after(100, self.controller.finalize_system_check, context="FinalizeSystemCheck")
     def _pencere_goruntulendi(self, event: tk.Event) -> None:
-        if event.widget is self.pencere:
+        if event.widget is self.pencere and self.model.current_ezan_saatleri:
             TkManager.safe_after(0, self.update_countdown, context="WindowRestore")
     def _tk_hatasini_bildir(self, exc, val, tb) -> None:
         hata_metni = "".join(traceback.format_exception(exc, val, tb))

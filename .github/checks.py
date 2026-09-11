@@ -91,12 +91,29 @@ def the_probe_decides_the_next_state():
     same(model._failure_count, 0, "a successful probe clears the count")
 
 
+def new_view(developer_mode):
+    view = object.__new__(iftar_sayaci.IftarView)
+    view.model = types.SimpleNamespace(DEVELOPER_MODE=developer_mode)
+    return view
+
+
+def the_window_is_saved_at_the_height_it_was_left_at():
+    modes = ((False, iftar_sayaci.WIN_HEIGHT_NORMAL), (True, iftar_sayaci.WIN_HEIGHT_DEV))
+    for developer_mode, asgari in modes:
+        view = new_view(developer_mode)
+        same(view._asgari_yukseklik(), asgari, "the smallest height the window is allowed to take")
+        for height in (asgari, asgari + 1, asgari + 210):
+            view.windowed_geometry = "965x" + str(height) + "+100+100"
+            same(view._kaydedilecek_geometri(), view.windowed_geometry, "the height the window was left at is the height that is saved")
+
+
 def main():
     checks = (
         opens_at_the_threshold,
         an_open_breaker_is_not_reopened,
         a_skipped_call_is_not_a_failure,
         the_probe_decides_the_next_state,
+        the_window_is_saved_at_the_height_it_was_left_at,
     )
     for check in checks:
         try:

@@ -1,5 +1,11 @@
 # Değişiklik Günlüğü
 
+## 1.2.1
+
+- Pencere artık kapatıldığı yükseklikte açılıyor, kendiliğinden uzamıyor.
+- Pencere, panellerin sığması için gereken yükseklikten daha kısa yapılamıyor, Geliştirici Modu açıkken bu yükseklik Konsol Paneli'ni de kapsıyor.
+- Namaz vakitleri alınamadığında, pencere simge durumundan geri getirildiğinde ilerleme çubuğu yeniden yükleniyormuş gibi görünmüyor.
+
 ## 1.2.0
 
 - IftarSayaci.exe dosyasının sürüm ve ürün bilgisi artık Windows'ta dosyanın özelliklerinde ve Dosya Gezgini'nin Dosya sürümü sütununda görünüyor.
