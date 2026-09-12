@@ -157,7 +157,7 @@ BASE_DIR = uygulama_dizini()
 
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-APP_VERSION = "1.2.1"
+APP_VERSION = "1.2.2"
 GEOPY_MIN_DELAY = 1.1
 
 class TkManager:
@@ -534,7 +534,7 @@ class IftarModel:
     def set_excepthook(self) -> None:
         sys.excepthook = self.my_excepthook
     def log_message(self, message: str) -> None:
-        logging.info(message)
+        logging.info(message, stacklevel=2)
     def clear_log_file(self) -> None:
         while True:
             try:
@@ -1058,7 +1058,7 @@ class IftarController:
     def set_view(self, view: "IftarView") -> None:
         self.view = view
     def log_message(self, message: str) -> None:
-        self.model.log_message(message)
+        logging.info(message, stacklevel=2)
     def clear_log(self) -> None:
         self.model.clear_log_file()
         if self.view:
@@ -1607,7 +1607,7 @@ class IftarView:
             kalan_str = sure_hms((next_imsak - now).total_seconds())
             toplam = (next_imsak - iftar_time).total_seconds()
             yuzde = ilerleme_yuzdesi((now - iftar_time).total_seconds(), toplam)
-            self.sayac_label.config(text=f"🎉 İftar Sonrası, Sahura Kalan: {kalan_str} ({_ti or '-'})", foreground="#27AE60")
+            self.sayac_label.config(text=f"🎉 İftar Sonrası, Sahura Kalan: {kalan_str} ({next_imsak.strftime('%H:%M')})", foreground="#27AE60")
             self.yuzde_etiket.config(text=f"Hayırlı iftarlar 🍽️  |  Serbest: {sure_hm(toplam)}, %{yuzde:.1f} tamamlandı".replace('.', ','), foreground="#27AE60")
             self.yuzde_cubugu["value"] = yuzde
             if self._progressbar_mode != "post_iftar":
@@ -2089,6 +2089,14 @@ class IftarView:
                 self.prayer_time_labels.append(lbl2)
                 self.vakit_cerceve.columnconfigure(i, weight=1)
         if not ezan_saatleri:
+            if self._last_saatler is not None:
+                self._last_saatler = None
+                self._last_vakit_indices = None
+                for i in range(6):
+                    self.prayer_labels[i].config(text=self._label_texts[i], font=self.default_font, foreground="#888888")
+                    self.prayer_time_labels[i].config(text="⏳", font=self.default_font, foreground="#888888")
+                    self._pl_state[i] = None
+                    self._pl_time_state[i] = None
             return
         saatler = tuple(ezan_saatleri.get(v, "-") for v in self._vakitler_ing)
         tz_str = ezan_saatleri.get("timezone")

@@ -1,5 +1,11 @@
 # Değişiklik Günlüğü
 
+## 1.2.2
+
+- Namaz vakitleri alınamadığında Namaz Vakitleri panelinde artık önceki günün ya da önceki konumun saatleri kalmıyor.
+- İftar sonrası sayaçta, yarının imsak saati alınamadığında da geri sayımın bittiği saat yazıyor.
+- Geliştirici Modu'nda Konsol Paneli ve kayıt dosyasındaki satırlar, hepsi aynı yeri değil, artık geldikleri kod satırını gösteriyor.
+
 ## 1.2.1
 
 - Pencere artık kapatıldığı yükseklikte açılıyor, kendiliğinden uzamıyor.

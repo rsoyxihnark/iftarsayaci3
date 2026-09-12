@@ -1,3 +1,5 @@
+import datetime
+import logging
 import os
 import sys
 import threading
@@ -107,6 +109,122 @@ def the_window_is_saved_at_the_height_it_was_left_at():
             same(view._kaydedilecek_geometri(), view.windowed_geometry, "the height the window was left at is the height that is saved")
 
 
+class FakeWidget:
+    def __init__(self):
+        self.values = {}
+
+    def config(self, **kwargs):
+        self.values.update(kwargs)
+
+    def __setitem__(self, key, value):
+        self.values[key] = value
+
+    def start(self, *args):
+        pass
+
+    def stop(self, *args):
+        pass
+
+    def winfo_exists(self):
+        return True
+
+    def state(self):
+        return "normal"
+
+
+def counting_view(times):
+    view = object.__new__(iftar_sayaci.IftarView)
+    view.model = object.__new__(iftar_sayaci.IftarModel)
+    view.model.current_ezan_saatleri = times
+    view.model._zaman_dilimi = None
+    view.model.yesterday_maghrib_str = None
+    view.model.tomorrow_imsak_str = None
+    view.controller = types.SimpleNamespace(log_message=lambda message: None)
+    view.pencere = FakeWidget()
+    view.sayac_label = FakeWidget()
+    view.yuzde_etiket = FakeWidget()
+    view.yuzde_cubugu = FakeWidget()
+    view._vakitler_ing = ("fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha")
+    view._label_texts = tuple("vakit" + str(i) for i in range(6))
+    view.prayer_labels = [FakeWidget() for _ in range(6)]
+    view.prayer_time_labels = [FakeWidget() for _ in range(6)]
+    view.default_font = view.bold_font = None
+    view._time_parse_cache = {}
+    view._tp_key = view._tp_values = None
+    view._last_saatler = None
+    view._last_vakit_indices = None
+    view._pl_state = [None] * 6
+    view._pl_time_state = [None] * 6
+    view._last_arayuz_minute = (-1, -1)
+    view._last_countdown_date = None
+    view._countdown_parsed_key = view._countdown_parsed_times = None
+    view._countdown_after_id = None
+    view._progressbar_mode = None
+    view._iftar_celebrated_date = None
+    return view
+
+
+GUNUN_VAKITLERI = {
+    "fajr": "05:20", "sunrise": "06:45", "dhuhr": "13:10",
+    "asr": "16:35", "maghrib": "19:30", "isha": "20:50",
+    "timezone": "Europe/Istanbul",
+}
+
+
+def the_countdown_names_the_time_it_counts_down_to():
+    onceki_saat_al = iftar_sayaci.get_utc_now
+    onceki_zamanlayici = iftar_sayaci.TkManager.safe_after
+    iftar_sayaci.TkManager.safe_after = staticmethod(lambda delay, callback, *a, **k: None)
+    try:
+        for yarinki_imsak, beklenen in (("05:22", "05:22"), (None, "05:20"), ("", "05:20")):
+            view = counting_view(dict(GUNUN_VAKITLERI))
+            view.model.tomorrow_imsak_str = yarinki_imsak
+            zaman_dilimi = view.model.zaman_dilimi()
+            simdi = datetime.datetime(2026, 3, 20, 21, 0, tzinfo=zaman_dilimi)
+            iftar_sayaci.get_utc_now = lambda simdi=simdi: simdi.astimezone(datetime.timezone.utc)
+            view.update_countdown()
+            metin = view.sayac_label.values["text"]
+            if "(" + beklenen + ")" not in metin:
+                raise AssertionError("the countdown does not name " + beklenen + ": " + metin)
+    finally:
+        iftar_sayaci.get_utc_now = onceki_saat_al
+        iftar_sayaci.TkManager.safe_after = onceki_zamanlayici
+
+
+def prayer_times_that_no_longer_apply_are_cleared():
+    view = counting_view(dict(GUNUN_VAKITLERI))
+    onceki_saat_al = iftar_sayaci.get_utc_now
+    zaman_dilimi = view.model.zaman_dilimi()
+    simdi = datetime.datetime(2026, 3, 20, 14, 0, tzinfo=zaman_dilimi)
+    iftar_sayaci.get_utc_now = lambda: simdi.astimezone(datetime.timezone.utc)
+    try:
+        view.arayuzu_guncelle(dict(GUNUN_VAKITLERI))
+        same(view.prayer_time_labels[0].values["text"], "05:20", "the fetched time is shown")
+        view.arayuzu_guncelle({})
+        same([label.values["text"] for label in view.prayer_time_labels], ["⏳"] * 6, "no time survives the data it came from")
+        same(view._last_vakit_indices, None, "no prayer is left marked as the current one")
+    finally:
+        iftar_sayaci.get_utc_now = onceki_saat_al
+
+
+def the_log_says_which_line_it_came_from():
+    kayitlar = []
+    dinleyici = logging.Handler()
+    dinleyici.emit = kayitlar.append
+    logger = logging.getLogger()
+    logger.addHandler(dinleyici)
+    try:
+        model = object.__new__(iftar_sayaci.IftarModel)
+        controller = object.__new__(iftar_sayaci.IftarController)
+        model.log_message("modelden")
+        model_satiri = sys._getframe().f_lineno - 1
+        controller.log_message("kontrolcüden")
+        controller_satiri = sys._getframe().f_lineno - 1
+        same([kayit.lineno for kayit in kayitlar], [model_satiri, controller_satiri], "the line the message was written on")
+    finally:
+        logger.removeHandler(dinleyici)
+
+
 def main():
     checks = (
         opens_at_the_threshold,
@@ -114,6 +232,9 @@ def main():
         a_skipped_call_is_not_a_failure,
         the_probe_decides_the_next_state,
         the_window_is_saved_at_the_height_it_was_left_at,
+        the_countdown_names_the_time_it_counts_down_to,
+        prayer_times_that_no_longer_apply_are_cleared,
+        the_log_says_which_line_it_came_from,
     )
     for check in checks:
         try:
