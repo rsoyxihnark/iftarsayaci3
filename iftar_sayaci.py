@@ -59,7 +59,34 @@ class StreamToLogger(io.TextIOBase):
 
 T = TypeVar("T")
 
-CHECK_MODULE_UPDATES = False
+def parse_bool(value: Any) -> bool:
+    if isinstance(value, str):
+        return value.strip().lower() in ("true", "1", "yes")
+    return bool(value)
+
+def uygulama_dizini() -> str:
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(os.path.abspath(sys.executable))
+    return os.path.dirname(os.path.abspath(__file__))
+
+BASE_DIR = uygulama_dizini()
+
+BASLANGIC_KAYITLARI: List[Tuple[int, str]] = []
+
+def baslangic_kaydi(level: int, message: str) -> None:
+    BASLANGIC_KAYITLARI.append((level, message))
+    if level >= logging.ERROR:
+        logging.log(level, message)
+
+def modul_guncelleme_tercihi() -> bool:
+    ayarlar = configparser.ConfigParser(interpolation=None)
+    try:
+        ayarlar.read(os.path.join(BASE_DIR, "settings.ini"), encoding="utf-8-sig")
+        return parse_bool(ayarlar["AYARLAR"].get("check_module_updates", "False"))
+    except (configparser.Error, OSError, UnicodeDecodeError, KeyError):
+        return False
+
+CHECK_MODULE_UPDATES = modul_guncelleme_tercihi()
 
 class ModuleManager:
     VALID_PACKAGE_REGEX = re.compile(r"^[a-zA-Z][a-zA-Z0-9_]*(?:[.-][a-zA-Z0-9_]+)*$")
@@ -82,7 +109,7 @@ class ModuleManager:
         if not cls.VALID_PACKAGE_REGEX.match(pkg):
             raise ValueError(f"Geçersiz veya tehlikeli paket adı: {pkg}")
         command = cls.pip_install_command(pkg)
-        logging.info("Modül kuruluyor: %s", " ".join(command))
+        baslangic_kaydi(logging.INFO, f"Modül kuruluyor: {' '.join(command)}")
         subprocess.check_call(command, shell=False)
         if "--user" in command:
             kullanici_dizini = site.getusersitepackages()
@@ -91,32 +118,45 @@ class ModuleManager:
         importlib.invalidate_caches()
         try:
             importlib.import_module(module_info.mod_name)
-            logging.info("Modül '%s' başarıyla kuruldu.", module_info.mod_name)
+            baslangic_kaydi(logging.INFO, f"Modül '{module_info.mod_name}' başarıyla kuruldu.")
         except (ImportError, ModuleNotFoundError) as e:
-            logging.error("Modül '%s' kurulmasına rağmen import edilemedi: %s", module_info.mod_name, e)
+            baslangic_kaydi(logging.ERROR, f"Modül '{module_info.mod_name}' kurulmasına rağmen import edilemedi: {e}")
             raise
 
     @classmethod
+    def upgrade_module(cls, module_info: "ModuleManager.ModuleInfo") -> None:
+        pkg = module_info.pkg if module_info.pkg else module_info.mod_name
+        if not cls.VALID_PACKAGE_REGEX.match(pkg):
+            baslangic_kaydi(logging.ERROR, f"Geçersiz paket adı güncellenmedi: {pkg}")
+            return
+        try:
+            baslangic_kaydi(logging.INFO, f"Modül '{module_info.mod_name}' güncelleniyor.")
+            subprocess.check_call(cls.pip_install_command("--upgrade", pkg), shell=False)
+        except subprocess.CalledProcessError as e:
+            baslangic_kaydi(logging.ERROR, f"Modül '{module_info.mod_name}' güncellemesi başarısız: {e}")
+
+    @classmethod
     def manage_module(cls, module_info: "ModuleManager.ModuleInfo") -> None:
+        if CHECK_MODULE_UPDATES:
+            cls.upgrade_module(module_info)
         try:
             importlib.import_module(module_info.mod_name)
         except ImportError as e:
-            logging.error("Modül '%s' import edilemedi (%s). Kurulum deneniyor...", module_info.mod_name, e)
+            baslangic_kaydi(logging.ERROR, f"Modül '{module_info.mod_name}' import edilemedi ({e}). Kurulum deneniyor...")
             cls.install_module(module_info)
-        if CHECK_MODULE_UPDATES:
-            try:
-                logging.info("Modül '%s' güncelleniyor.", module_info.mod_name)
-                pkg_name = module_info.pkg if module_info.pkg else module_info.mod_name
-                subprocess.check_call(cls.pip_install_command("--upgrade", pkg_name))
-            except subprocess.CalledProcessError as e:
-                logging.error("Modül '%s' güncellemesi başarısız: %s", module_info.mod_name, e)
 
     @classmethod
     def ensure_required_modules(cls, modules: List["ModuleManager.ModuleInfo"]) -> None:
         if getattr(sys, "frozen", False):
+            if CHECK_MODULE_UPDATES:
+                baslangic_kaydi(logging.INFO, "Modüller programın içinde geldiği için modül güncellemeleri kontrol edilmedi.")
             return
+        if CHECK_MODULE_UPDATES:
+            baslangic_kaydi(logging.INFO, "Açılışta modül güncellemeleri kontrol ediliyor.")
         for mod_info in modules:
             cls.manage_module(mod_info)
+        if CHECK_MODULE_UPDATES:
+            baslangic_kaydi(logging.INFO, "Modül güncelleme kontrolü bitti.")
 
 required_modules: List[ModuleManager.ModuleInfo] = [
     ModuleManager.ModuleInfo("babel", "babel"),
@@ -148,16 +188,9 @@ from geopy.extra.rate_limiter import RateLimiter
 
 from hijridate import Gregorian as HicriGregorian
 
-def uygulama_dizini() -> str:
-    if getattr(sys, "frozen", False):
-        return os.path.dirname(os.path.abspath(sys.executable))
-    return os.path.dirname(os.path.abspath(__file__))
-
-BASE_DIR = uygulama_dizini()
-
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-APP_VERSION = "1.2.2"
+APP_VERSION = "1.2.3"
 GEOPY_MIN_DELAY = 1.1
 
 class TkManager:
@@ -274,11 +307,6 @@ def safe_askyesno(title: str, message: str, *args, **kwargs):
 @run_on_main_thread_global
 def safe_askstring(title: str, prompt: str, *args, **kwargs) -> Optional[str]:
     return simpledialog.askstring(title, prompt, *args, **kwargs)
-
-def parse_bool(value: Any) -> bool:
-    if isinstance(value, str):
-        return value.strip().lower() in ("true", "1", "yes")
-    return bool(value)
 
 class APIError(Exception):
     pass
@@ -528,6 +556,11 @@ class IftarModel:
         sys.stdout = StreamToLogger(logger, logging.INFO)
         sys.stderr = StreamToLogger(logger, logging.ERROR)
         logging.info("Loglama sistemi başlatıldı.")
+        self.baslangic_kayitlarini_aktar()
+    def baslangic_kayitlarini_aktar(self) -> None:
+        while BASLANGIC_KAYITLARI:
+            kayit_seviyesi, kayit_mesaji = BASLANGIC_KAYITLARI.pop(0)
+            logging.log(kayit_seviyesi, kayit_mesaji)
     def my_excepthook(self, exc_type: type[BaseException], exc_value: BaseException, exc_tb: Optional[types_mod.TracebackType]) -> None:
         hata_mesaji = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
         logging.error("HATA: %s\nLütfen log dosyasını kontrol ediniz.", hata_mesaji)
@@ -1293,7 +1326,8 @@ class IftarView:
         new_val = self.check_module_updates_var.get()
         self.model.config_manager.set("check_module_updates", "True" if new_val else "False")
         self.model.config_manager.save()
-        self.controller.log_message(f"Açılışta modül güncellemeleri kontrol et: {'Aktif' if new_val else 'Pasif'}")
+        durum = "Aktif" if new_val else "Pasif"
+        self.controller.log_message(f"Açılışta modül güncellemeleri kontrol et: {durum} (bir sonraki açılışta geçerli olacak)")
     def toggle_developer_mode(self) -> None:
         new_val = self.developer_mode_var.get()
         self.model.DEVELOPER_MODE = new_val
@@ -2301,9 +2335,6 @@ def graceful_shutdown():
 if __name__ == "__main__":
     base_dir = BASE_DIR
     model = IftarModel(base_dir=base_dir, default_timeout=10, short_timeout=5, default_retries=3, backoff_factor=2)
-    CHECK_MODULE_UPDATES = parse_bool(model.config_manager.get("check_module_updates", "False"))
-    if CHECK_MODULE_UPDATES:
-        ModuleManager.ensure_required_modules(required_modules)
     controller = IftarController(model=model)
     view = IftarView(controller=controller, model=model)
     controller.set_view(view)

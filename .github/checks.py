@@ -1,3 +1,4 @@
+import ast
 import datetime
 import logging
 import os
@@ -225,6 +226,133 @@ def the_log_says_which_line_it_came_from():
         logger.removeHandler(dinleyici)
 
 
+def the_module_update_setting_is_read_before_the_modules_are_imported():
+    kaynak = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "iftar_sayaci.py")
+    with open(kaynak, encoding="utf-8") as dosya:
+        agac = ast.parse(dosya.read())
+    atamalar = []
+    kontrol_satiri = ilk_import_satiri = None
+    paketler = ("certifi", "geopy", "ntplib", "requests", "babel", "dotenv", "hijridate")
+    for dal in agac.body:
+        if isinstance(dal, ast.Assign):
+            for hedef in dal.targets:
+                if isinstance(hedef, ast.Name) and hedef.id == "CHECK_MODULE_UPDATES":
+                    atamalar.append(dal)
+        if isinstance(dal, ast.Expr) and isinstance(dal.value, ast.Call):
+            islev = dal.value.func
+            if isinstance(islev, ast.Attribute) and islev.attr == "ensure_required_modules":
+                kontrol_satiri = dal.lineno
+        if isinstance(dal, (ast.Import, ast.ImportFrom)) and ilk_import_satiri is None:
+            adlar = [ad.name for ad in dal.names]
+            etiket = getattr(dal, "module", None) or ",".join(adlar)
+            if etiket.split(".")[0] in paketler:
+                ilk_import_satiri = dal.lineno
+    same(len(atamalar), 1, "the setting is settled in one place")
+    if None in (kontrol_satiri, ilk_import_satiri):
+        raise AssertionError("the startup steps are no longer where the check looks for them")
+    if not isinstance(atamalar[0].value, ast.Call):
+        raise AssertionError("the setting is a fixed value instead of one read at startup")
+    ayar_satiri = atamalar[0].lineno
+    if not ayar_satiri < kontrol_satiri < ilk_import_satiri:
+        raise AssertionError("the setting is read at line " + str(ayar_satiri) +
+                             ", the modules are checked at line " + str(kontrol_satiri) +
+                             " and imported at line " + str(ilk_import_satiri))
+
+
+def the_setting_comes_from_the_settings_file():
+    onceki_dizin = iftar_sayaci.BASE_DIR
+    dizin = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ayar_denemesi")
+    os.makedirs(dizin, exist_ok=True)
+    yol = os.path.join(dizin, "settings.ini")
+    iftar_sayaci.BASE_DIR = dizin
+    try:
+        for yazilan, beklenen in (("True", True), ("False", False), ("1", True), ("yes", True)):
+            with open(yol, "w", encoding="utf-8") as dosya:
+                dosya.write("[AYARLAR]\ncheck_module_updates = " + yazilan + "\n")
+            same(iftar_sayaci.modul_guncelleme_tercihi(), beklenen, "the setting read back as " + yazilan)
+        os.remove(yol)
+        same(iftar_sayaci.modul_guncelleme_tercihi(), False, "no settings file means the check stays off")
+        with open(yol, "w", encoding="utf-8") as dosya:
+            dosya.write("bu bir ayar dosyası değil")
+        same(iftar_sayaci.modul_guncelleme_tercihi(), False, "an unreadable settings file leaves the check off")
+    finally:
+        iftar_sayaci.BASE_DIR = onceki_dizin
+        if os.path.exists(yol):
+            os.remove(yol)
+        os.rmdir(dizin)
+
+
+def module_probe(frozen, ticked):
+    cagrilar = []
+    onceki = (iftar_sayaci.CHECK_MODULE_UPDATES, iftar_sayaci.subprocess,
+              iftar_sayaci.importlib, getattr(sys, "frozen", None))
+    del iftar_sayaci.BASLANGIC_KAYITLARI[:]
+    iftar_sayaci.CHECK_MODULE_UPDATES = ticked
+    iftar_sayaci.subprocess = types.SimpleNamespace(
+        check_call=lambda komut, shell=False: cagrilar.append(
+            "pip " + [parca for parca in komut if not parca.startswith("-")][-1]),
+        CalledProcessError=onceki[1].CalledProcessError)
+    iftar_sayaci.importlib = types.SimpleNamespace(
+        import_module=lambda ad: cagrilar.append("import " + ad),
+        invalidate_caches=lambda: None)
+    if frozen:
+        sys.frozen = True
+    elif hasattr(sys, "frozen"):
+        del sys.frozen
+    try:
+        iftar_sayaci.ModuleManager.ensure_required_modules(
+            [iftar_sayaci.ModuleManager.ModuleInfo("babel", "babel")])
+        soylenenler = [mesaj for _, mesaj in iftar_sayaci.BASLANGIC_KAYITLARI]
+    finally:
+        iftar_sayaci.CHECK_MODULE_UPDATES, iftar_sayaci.subprocess, iftar_sayaci.importlib = onceki[:3]
+        if onceki[3] is None:
+            if hasattr(sys, "frozen"):
+                del sys.frozen
+        else:
+            sys.frozen = onceki[3]
+        del iftar_sayaci.BASLANGIC_KAYITLARI[:]
+    return cagrilar, soylenenler
+
+
+def a_ticked_module_update_check_updates_before_the_import():
+    cagrilar, soylenenler = module_probe(frozen=False, ticked=True)
+    same(cagrilar, ["pip babel", "import babel"], "the module is updated before it is imported")
+    if not soylenenler:
+        raise AssertionError("the update check says nothing about what it did")
+    cagrilar, soylenenler = module_probe(frozen=False, ticked=False)
+    same(cagrilar, ["import babel"], "an unticked check updates nothing")
+    same(soylenenler, [], "an unticked check says nothing")
+
+
+def a_built_in_module_says_why_it_was_not_checked():
+    cagrilar, soylenenler = module_probe(frozen=True, ticked=True)
+    same(cagrilar, [], "the program does not reach for pip when its modules are built in")
+    same(len(soylenenler), 1, "the ticked check explains itself once")
+    if "güncellemeleri kontrol edilmedi" not in soylenenler[0]:
+        raise AssertionError("the ticked check does not say it checked nothing: " + soylenenler[0])
+    cagrilar, soylenenler = module_probe(frozen=True, ticked=False)
+    same(soylenenler, [], "an unticked check says nothing")
+
+
+def startup_lines_reach_the_log_once_it_is_ready():
+    kayitlar = []
+    dinleyici = logging.Handler()
+    dinleyici.emit = lambda kayit: kayitlar.append(kayit.getMessage())
+    logger = logging.getLogger()
+    logger.addHandler(dinleyici)
+    del iftar_sayaci.BASLANGIC_KAYITLARI[:]
+    try:
+        iftar_sayaci.baslangic_kaydi(logging.INFO, "açılış satırı")
+        same(kayitlar, [], "a startup line waits until the log is ready")
+        model = object.__new__(iftar_sayaci.IftarModel)
+        model.baslangic_kayitlarini_aktar()
+        same(kayitlar, ["açılış satırı"], "the waiting line reaches the log")
+        same(iftar_sayaci.BASLANGIC_KAYITLARI, [], "a line that reached the log is not sent twice")
+    finally:
+        logger.removeHandler(dinleyici)
+        del iftar_sayaci.BASLANGIC_KAYITLARI[:]
+
+
 def main():
     checks = (
         opens_at_the_threshold,
@@ -235,6 +363,11 @@ def main():
         the_countdown_names_the_time_it_counts_down_to,
         prayer_times_that_no_longer_apply_are_cleared,
         the_log_says_which_line_it_came_from,
+        the_module_update_setting_is_read_before_the_modules_are_imported,
+        the_setting_comes_from_the_settings_file,
+        a_ticked_module_update_check_updates_before_the_import,
+        a_built_in_module_says_why_it_was_not_checked,
+        startup_lines_reach_the_log_once_it_is_ready,
     )
     for check in checks:
         try:

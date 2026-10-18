@@ -1,5 +1,12 @@
 # Değişiklik Günlüğü
 
+## 1.2.3
+
+- "Açılışta Modül Güncellemelerini Kontrol Et" seçeneği işaretliyken modüller artık gerçekten güncelleniyor.
+- İndirilen IftarSayaci.exe modülleriyle birlikte geldiğinden, seçenek işaretliyken artık güncelleme kontrolünün neden yapılmadığı yazılıyor.
+- Seçenek açılıp kapatıldığında artık değişikliğin bir sonraki açılışta geçerli olacağı yazılıyor.
+- Açılışta modül kurulumu ve güncellemesi hakkında yazılan satırlar artık Konsol Paneli'nde ve kayıt dosyasında görünüyor.
+
 ## 1.2.2
 
 - Namaz vakitleri alınamadığında Namaz Vakitleri panelinde artık önceki günün ya da önceki konumun saatleri kalmıyor.
